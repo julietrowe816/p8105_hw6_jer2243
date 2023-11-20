@@ -1,0 +1,6 @@
+---
+title: "p8105_hw6_jer2243"
+author: "Juliet Rowe"
+date: "2023-11-20"
+output: github_document
+---
