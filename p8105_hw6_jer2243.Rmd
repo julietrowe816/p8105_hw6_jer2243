@@ -10,6 +10,8 @@ output: github_document
 Load libraries
 ```{r}
 library(tidyverse)
+
+set.seed(1)
 ```
 
 
@@ -26,5 +28,40 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) |>
   select(name, id, everything())
+```
+
+Create bootstrap with 5000 samples
+```{r}
+bootstrap_results = weather_df |> 
+  modelr::bootstrap(n = 5000) |> 
+  mutate(
+    models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    results = map(models, broom::tidy)) |> 
+  select(results) |> 
+  unnest(results)
+
+```
+
+Extract estimates for tmin and prcp
+```{r}
+estimate_tmin <- bootstrap_results |> 
+  filter(term == "tmin") |> 
+  pull(estimate)
+
+estimate_prcp <- bootstrap_results |>
+  filter(term == "prcp") |> 
+  pull(estimate)
+```
+
+Calculate r^2 and log(beta1*beta2)
+```{r}
+bootstrap_estimate_results <- bootstrap_results |>
+  summarize(
+    r_squared = (sum(estimate_tmin * estimate_prcp) / (sd(estimate_tmin) * sd(estimate_prcp)))^2,
+    log_beta_product = ifelse(mean(estimate_tmin) > 0 & mean(estimate_prcp) > 0,
+                              log(mean(estimate_tmin) * mean(estimate_prcp)),
+                              NA)
+  )
+
 ```
 
