@@ -72,8 +72,8 @@ Calculate 95% CI for r-squared
 ```{r}
 bootstrap_results |>
   summarize(
-    ci_lower = quantile(mean(r_squared), 0.025),
-    ci_upper = quantile(mean(r_squared), 0.975)
+    ci_lower = quantile(r_squared, 0.025),
+    ci_upper = quantile(r_squared, 0.975)
   ) |>
   knitr::kable()
 ```
@@ -99,4 +99,6 @@ birthweight_df = birthweight_df |>
   ) |>
   drop_na()
   
+```
+
 
