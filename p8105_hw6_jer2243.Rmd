@@ -36,34 +36,43 @@ bootstrap_results = weather_df |>
   modelr::bootstrap(n = 5000) |> 
   mutate(
     models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df)),
-    results = map(models, broom::tidy)) |> 
-  select(results) |> 
-  unnest(results)
+    results = map(models, broom::tidy),
+    rsq = map(models, broom::glance)) |> 
+  select(results, .id, rsq) |> 
+  unnest(results) |>
+  filter(term %in% c("tmin", "prcp")) |>
+  group_by(.id) |>
+  mutate(beta1xbeta2 = prod(estimate),
+         log_beta_product = log(beta1xbeta2)) |>
+  select(log_beta_product, rsq) |>
+  unnest(rsq) |>
+  janitor::clean_names() |>
+  select(log_beta_product, id, r_squared) |>
+  unique()
 
 ```
 
-Extract estimates for tmin and prcp
+Plot distribution of log_beta_product
 ```{r}
-estimate_tmin <- bootstrap_results |> 
-  filter(term == "tmin") |> 
-  pull(estimate)
-
-estimate_prcp <- bootstrap_results |>
-  filter(term == "prcp") |> 
-  pull(estimate)
+bootstrap_results |>
+  ggplot(aes(x=log_beta_product)) + geom_density()
 ```
+The distribution of the bootstrap estimates of the log of the product of beta 1 and beta 2 is left skewed, unimodal, and peaks at around -5.5.
 
-Calculate r^2 and log(beta1*beta2)
+
+Plot distribution of r-squared
 ```{r}
-bootstrap_estimate_results <- bootstrap_results |>
-  summarize(
-    r_squared = (sum(estimate_tmin * estimate_prcp) / (sd(estimate_tmin) * sd(estimate_prcp)))^2,
-    log_beta_product = ifelse(mean(estimate_tmin) > 0 & mean(estimate_prcp) > 0,
-                              log(mean(estimate_tmin) * mean(estimate_prcp)),
-                              NA)
-  )
+bootstrap_results |>
+  ggplot(aes(x=r_squared)) + geom_density()
+```
+The distribution of the bootstrap estimates of r-squared is slightly left-skewed, unimodal, and peaks at around 0.92.
+
+
+Calculate 95% CI for log beta product and r-squared
+```{r}
 
 ```
+
 
 
 ## Problem 3
