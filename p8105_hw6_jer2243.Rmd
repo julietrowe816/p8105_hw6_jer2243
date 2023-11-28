@@ -68,12 +68,18 @@ bootstrap_results |>
 The distribution of the bootstrap estimates of r-squared is slightly left-skewed, unimodal, and peaks at around 0.92.
 
 
-Calculate 95% CI for log beta product and r-squared
+Calculate 95% CI for r-squared
 ```{r}
-
+bootstrap_results |>
+  summarize(
+    ci_lower = quantile(mean(r_squared), 0.025),
+    ci_upper = quantile(mean(r_squared), 0.975)
+  ) |>
+  knitr::kable()
 ```
 
 
+Calculate 95% CI for log beta product
 
 ## Problem 3
 
