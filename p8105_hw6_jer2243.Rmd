@@ -10,6 +10,10 @@ output: github_document
 Load libraries
 ```{r}
 library(tidyverse)
+library(modelr)
+library(mgcv)
+library(dplyr)
+library(knitr)
 
 set.seed(1)
 ```
@@ -68,18 +72,19 @@ bootstrap_results |>
 The distribution of the bootstrap estimates of r-squared is slightly left-skewed, unimodal, and peaks at around 0.92.
 
 
-Calculate 95% CI for r-squared
+Calculate 95% CI for r-squared and log beta product
 ```{r}
-bootstrap_results |>
-  summarize(
-    ci_lower = quantile(r_squared, 0.025),
-    ci_upper = quantile(r_squared, 0.975)
-  ) |>
-  knitr::kable()
+bootstrap_CIs = bootstrap_results |>
+  unique() |> ungroup() |> select(-id) |> summarize(betas_mean = mean(log_beta_product, na.rm=TRUE),
+                                              betas_low = quantile(log_beta_product, 0.025, na.rm=TRUE),
+                                              betas_high = quantile(log_beta_product, 0.975, na.rm=TRUE),
+                                              rsq_mean = mean(r_squared),
+                                              rsq_low = quantile(r_squared, 0.025),
+                                              rsq_high = quantile(r_squared, 0.975))
+bootstrap_CIs |> knitr::kable()
 ```
 
 
-Calculate 95% CI for log beta product
 
 ## Problem 3
 
@@ -101,4 +106,40 @@ birthweight_df = birthweight_df |>
   
 ```
 
+
+Proposed regression for birthweight 
+```{r}
+fit = lm(bwt ~ babysex + delwt + gaweeks + mrace + parity + smoken, data = birthweight_df)
+
+summary(fit)
+
+modelr::add_residuals(birthweight_df, fit)
+modelr::add_predictions(birthweight_df, fit)
+```
+
+
+Plot of residuals against fitted values
+```{r}
+birthweight_df <- birthweight_df |> 
+  modelr::add_residuals(fit) |> 
+  ggplot(aes(x = bwt, y = resid)) + geom_violin() 
+
+```
+
+
+Comparison plots
+```{r}
+fit2 = lm(bwt ~ blength + gaweeks, data = birthweight_df)
+
+fit3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*babysex*blength, data = birthweight_df)
+
+birthweight_df |> 
+  gather_predictions(fit, fit2, fit3) |> 
+  mutate(model = fct_inorder(model)) |> 
+  ggplot(aes(x = bwt, y = resid)) + 
+  geom_point() + 
+  geom_line(aes(y = pred), color = "red") + 
+  facet_wrap(~model)
+
+```
 
