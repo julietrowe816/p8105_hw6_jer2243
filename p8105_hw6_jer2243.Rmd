@@ -83,14 +83,15 @@ bootstrap_CIs = bootstrap_results |>
                                               rsq_high = quantile(r_squared, 0.975))
 bootstrap_CIs |> knitr::kable()
 ```
-
+The 95% CI for log(beta1xbeta2) = (`r bootstrap_CIs$betas_low`, `r bootstrap_CIs$betas_high`).
+The 95% CI for log(beta1xbeta2) = (`r bootstrap_CIs$rsq_low`, `r bootstrap_CIs$rsq_high`).
 
 
 ## Problem 3
 
 Load and clean data
 
-variables want to convert to factor: babysex, frace, malform, mrace
+variables to convert to factor: babysex, frace, malform, mrace
 ```{r}
 birthweight_df <- read.csv("birthweight.csv")
 
@@ -119,29 +120,22 @@ fit |>
 summary(fit)
 
 ```
+My proposed model for birthweight includes `delwt `, mother's weight at delivery, `gaweeks`, gestational age in weeks, `mrace`, mother's race, `parity`, number of live births prior to this pregnancy, and `smoken`, average number of cigarettes smoked per day during pregnancy. I chose these variables because I know that they are all likely to have a biological effect on fetal development and therefore the birthweight of the baby when it is born. The p-values for all of these variables, aside from 0.321, are quite small so it seems like my hypothesized model was pretty good!
 
 
+Plot of residuals against fitted values
 ```{r}
 birthweight_df |>
   modelr::add_residuals(fit) |>
   modelr::add_predictions(fit) |>
   ggplot(aes(x=resid, y=pred)) + geom_point(alpha=0.5, size=0.5)
 ```
+The plot of residuals against fitted values appears to be clustered around 0, with the average predicted value looking to be around 3200 grams for birthweight. This appears to be a decent fit, although there are a good amount of outliers.
 
-
-Plot of residuals against fitted values
-```{r}
-birthweight_df <- birthweight_df |> 
-  modelr::add_residuals(fit) |> 
-  ggplot(aes(x = bwt, y = resid)) + geom_violin() 
-
-```
-
-
-Comparison plots
+Cross-validation comparison
 ```{r}
 cv_df = 
-  crossv_mc(birthweight_df, 10) 
+  crossv_mc(birthweight_df, 100) 
 
 cv_df =
   cv_df |> 
@@ -168,3 +162,4 @@ cv_df |>
   
 ```
 
+Based on the RMSE values, it looks like the 3rd model with the interaction terms is the best fit. This model has significantly lower RMSE values than the other two. 
