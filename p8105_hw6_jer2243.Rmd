@@ -111,10 +111,21 @@ Proposed regression for birthweight
 ```{r}
 fit = lm(bwt ~ babysex + delwt + gaweeks + mrace + parity + smoken, data = birthweight_df)
 
+fit |>
+  broom::tidy() |>
+  select(term, estimate, p.value) |>
+  knitr::kable(digits=3)
+
 summary(fit)
 
-modelr::add_residuals(birthweight_df, fit)
-modelr::add_predictions(birthweight_df, fit)
+```
+
+
+```{r}
+birthweight_df |>
+  modelr::add_residuals(fit) |>
+  modelr::add_predictions(fit) |>
+  ggplot(aes(x=resid, y=pred)) + geom_point(alpha=0.5, size=0.5)
 ```
 
 
@@ -129,17 +140,31 @@ birthweight_df <- birthweight_df |>
 
 Comparison plots
 ```{r}
-fit2 = lm(bwt ~ blength + gaweeks, data = birthweight_df)
+cv_df = 
+  crossv_mc(birthweight_df, 10) 
 
-fit3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*babysex*blength, data = birthweight_df)
+cv_df =
+  cv_df |> 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
 
-birthweight_df |> 
-  gather_predictions(fit, fit2, fit3) |> 
-  mutate(model = fct_inorder(model)) |> 
-  ggplot(aes(x = bwt, y = resid)) + 
-  geom_point() + 
-  geom_line(aes(y = pred), color = "red") + 
-  facet_wrap(~model)
+cv_df = 
+  cv_df |> 
+  mutate(
+    mod_1  = map(train, \(df) lm(bwt ~ babysex + delwt + gaweeks + mrace + parity + smoken, data = df)),
+    mod_2  = map(train, \(df) lm(bwt ~ blength + gaweeks, data=df)),
+    mod_3  = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data=df))) |> 
+  mutate(
+    rmse_1 = map2_dbl(mod_1, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_2 = map2_dbl(mod_2, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_3 = map2_dbl(mod_3, test, \(mod, df) rmse(model = mod, data = df)))
 
+cv_df |>
+  select(starts_with("rmse")) |>
+  pivot_longer(
+    everything(), names_to="model", values_to="rmse", names_prefix="rmse_") |>
+  ggplot(aes(x=model, y=rmse)) + geom_violin()
+  
 ```
 
