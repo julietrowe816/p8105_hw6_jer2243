@@ -72,6 +72,16 @@ bootstrap_results |>
 The distribution of the bootstrap estimates of r-squared is slightly left-skewed, unimodal, and peaks at around 0.92.
 
 
+Calculate number of log(beta1xbeta2) that are undefined
+```{r}
+nan_count <- bootstrap_results |>
+  pull("log_beta_product") |>
+  is.nan() |>
+  sum()
+```
+3361 out of 5000 observations for log(beta1xbeta2) are undefined.
+
+
 Calculate 95% CI for r-squared and log beta product
 ```{r}
 bootstrap_CIs = bootstrap_results |>
